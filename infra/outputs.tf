@@ -5,4 +5,3 @@ output "cluster_name" {
 output "ecr_vote_url" {
   value = aws_ecr_repository.vote.repository_url
 }
-#trigger pipeline
