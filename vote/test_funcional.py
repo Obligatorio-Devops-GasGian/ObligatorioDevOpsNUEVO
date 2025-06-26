@@ -1,11 +1,9 @@
 # test_funcional.py
-# Verifica que vote/app.py se ejecuta sin errores
+# Verifica que la app de vote responde correctamente en su ruta raíz
 
-import subprocess
+from vote.app import app
 
 def test_app_runs():
-    subprocess.run(
-        ["python", "vote/app.py"],
-        check=True,
-        timeout=10
-    )
+    client = app.test_client()
+    response = client.get("/")
+    assert response.status_code == 200
