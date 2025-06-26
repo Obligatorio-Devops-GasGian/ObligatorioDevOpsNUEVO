@@ -24,7 +24,7 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Dar permisos a app.py
+      - name: Permission to app.py
         run: chmod +x vote/app.py
 
       - name: Run functional test
