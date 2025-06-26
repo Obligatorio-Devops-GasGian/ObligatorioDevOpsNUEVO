@@ -29,6 +29,7 @@ jobs:
 
       - name: Run functional test
         run: |
+          export PYTHONPATH=$PYTHONPATH:.
           pytest vote/test_funcional.py
 
       - name: Run SonarCloud analysis
