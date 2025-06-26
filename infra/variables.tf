@@ -9,3 +9,9 @@ variable "aws_profile" {
   type        = string
   default     = "default"
 }
+
+variable "ecs_task_execution_role_arn" {
+  description = "ARN del rol IAM ya existente para ejecución de tareas ECS"
+  type        = string
+  default     = "arn:aws:iam::216973958514:role/LabRole"
+}
