@@ -4,3 +4,8 @@ bin/
 obj/
 .vs/
 node_modules/
+infra/.terraform/
+
+*.tfstate
+*.tfstate.*
+.terraform/
