@@ -319,13 +319,20 @@ resource "aws_cloudwatch_log_group" "seed_data" {
   name              = "/ecs/seed-data"
   retention_in_days = 7
 }
-resource "aws_ecr_repository" "redis" {
-  name = "redis"
+resource "aws_cloudwatch_log_group" "db" {
+  name              = "/ecs/db"
+  retention_in_days = 7
+}
+resource "aws_cloudwatch_log_group" "db" {
+  name              = "/ecs/db"
+  retention_in_days = 7
 }
 
-resource "aws_ecr_repository" "db" {
-  name = "postgres"
+resource "aws_cloudwatch_log_group" "redis" {
+  name              = "/ecs/redis"
+  retention_in_days = 7
 }
+
 resource "aws_ecs_task_definition" "redis" {
   family                   = "redis-task"
   network_mode             = "awsvpc"
