@@ -292,3 +292,26 @@ resource "aws_ecs_service" "seed_data" {
   }
 }
 //test2
+########################################
+# CloudWatch Log Groups
+########################################
+
+resource "aws_cloudwatch_log_group" "vote" {
+  name              = "/ecs/vote"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "result" {
+  name              = "/ecs/result"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "worker" {
+  name              = "/ecs/worker"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "seed_data" {
+  name              = "/ecs/seed-data"
+  retention_in_days = 7
+}
