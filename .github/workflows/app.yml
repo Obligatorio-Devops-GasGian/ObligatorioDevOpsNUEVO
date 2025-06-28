@@ -81,3 +81,14 @@ jobs:
           docker build -t seed-data ./seed-data
           docker tag seed-data:latest ${{ steps.login-ecr.outputs.registry }}/seed-data:latest
           docker push ${{ steps.login-ecr.outputs.registry }}/seed-data:latest
+      - name: Force new deployment (vote, result, worker, seed)
+        run: |
+          for svc in vote-service result-service worker-service seed-data-service; do
+            aws ecs update-service \
+              --cluster obligatorio-cluster \
+              --service $svc \
+              --force-new-deployment \
+              --region $AWS_REGION
+          done
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
