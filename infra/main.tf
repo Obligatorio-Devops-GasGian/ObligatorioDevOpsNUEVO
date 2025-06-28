@@ -239,7 +239,7 @@ resource "aws_ecs_service" "vote" {
   launch_type     = "FARGATE"
   desired_count   = 1
   force_new_deployment = true
-
+  enable_execute_command = true
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
     security_groups  = [aws_security_group.instance_sg.id]
@@ -254,7 +254,7 @@ resource "aws_ecs_service" "result" {
   launch_type     = "FARGATE"
   desired_count   = 1
   force_new_deployment = true
-
+  enable_execute_command = true
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
     security_groups  = [aws_security_group.instance_sg.id]
@@ -269,7 +269,7 @@ resource "aws_ecs_service" "worker" {
   launch_type     = "FARGATE"
   desired_count   = 1
   force_new_deployment = true
-
+  enable_execute_command = true
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
     security_groups  = [aws_security_group.instance_sg.id]
@@ -284,7 +284,7 @@ resource "aws_ecs_service" "seed_data" {
   launch_type     = "FARGATE"
   desired_count   = 1
   force_new_deployment = true
-
+  enable_execute_command = true
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
     security_groups  = [aws_security_group.instance_sg.id]
