@@ -12,5 +12,4 @@ COPY . .
 # create POST data files with ab friendly formats
 RUN python make-data.py
 
-# ejecutar el script y luego mantener el contenedor activo
 CMD /bin/bash -c "/seed/generate-votes.sh && tail -f /dev/null"
