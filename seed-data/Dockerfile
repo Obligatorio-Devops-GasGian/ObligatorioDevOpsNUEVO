@@ -1,9 +1,8 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 # add apache bench (ab) tool
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    apache2-utils \
+    && apt-get install -y --no-install-recommends apache2-utils \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /seed
@@ -13,4 +12,5 @@ COPY . .
 # create POST data files with ab friendly formats
 RUN python make-data.py
 
-CMD ["/seed/generate-votes.sh"]
+# ejecutar el script y luego mantener el contenedor activo
+CMD /bin/bash -c "/seed/generate-votes.sh && tail -f /dev/null"
