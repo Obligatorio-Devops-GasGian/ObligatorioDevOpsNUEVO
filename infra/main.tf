@@ -315,3 +315,4 @@ resource "aws_cloudwatch_log_group" "seed_data" {
   name              = "/ecs/seed-data"
   retention_in_days = 7
 }
+//test4
