@@ -181,6 +181,7 @@ resource "aws_ecs_service" "vote" {
   task_definition = aws_ecs_task_definition.vote.arn
   launch_type     = "FARGATE"
   desired_count   = 1
+  force_new_deployment = true
 
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
@@ -195,6 +196,7 @@ resource "aws_ecs_service" "result" {
   task_definition = aws_ecs_task_definition.result.arn
   launch_type     = "FARGATE"
   desired_count   = 1
+  force_new_deployment = true
 
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
@@ -209,6 +211,7 @@ resource "aws_ecs_service" "worker" {
   task_definition = aws_ecs_task_definition.worker.arn
   launch_type     = "FARGATE"
   desired_count   = 1
+  force_new_deployment = true
 
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
@@ -223,6 +226,7 @@ resource "aws_ecs_service" "seed_data" {
   task_definition = aws_ecs_task_definition.seed_data.arn
   launch_type     = "FARGATE"
   desired_count   = 1
+  force_new_deployment = true
 
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
