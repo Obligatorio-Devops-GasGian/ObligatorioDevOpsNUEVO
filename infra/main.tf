@@ -113,67 +113,124 @@ resource "aws_ecr_repository" "seed_data" {
   name = "seed-data"
 }
 
+########################################
+# Vote
+########################################
 resource "aws_ecs_task_definition" "vote" {
   family                   = "vote-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = var.ecs_task_execution_role_arn
+  cpu    = "256"
+  memory = "512"
+  execution_role_arn = var.ecs_task_execution_role_arn
 
-  container_definitions = jsonencode([{
-    name      = "vote"
-    image     = "${aws_ecr_repository.vote.repository_url}:latest"
-    essential = true
-    portMappings = [{ containerPort = 80 }]
-  }])
+  container_definitions = jsonencode([
+    {
+      name  = "vote"
+      image = "${aws_ecr_repository.vote.repository_url}:latest"
+      essential    = true
+      portMappings = [{ containerPort = 80 }]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/vote"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
 }
 
+########################################
+# Result
+########################################
 resource "aws_ecs_task_definition" "result" {
   family                   = "result-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = var.ecs_task_execution_role_arn
+  cpu    = "256"
+  memory = "512"
+  execution_role_arn = var.ecs_task_execution_role_arn
 
-  container_definitions = jsonencode([{
-    name      = "result"
-    image     = "${aws_ecr_repository.result.repository_url}:latest"
-    essential = true
-    portMappings = [{ containerPort = 80 }]
-  }])
+  container_definitions = jsonencode([
+    {
+      name  = "result"
+      image = "${aws_ecr_repository.result.repository_url}:latest"
+      essential    = true
+      portMappings = [{ containerPort = 80 }]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/result"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
 }
 
+########################################
+# Worker
+########################################
 resource "aws_ecs_task_definition" "worker" {
   family                   = "worker-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = var.ecs_task_execution_role_arn
+  cpu    = "256"
+  memory = "512"
+  execution_role_arn = var.ecs_task_execution_role_arn
 
-  container_definitions = jsonencode([{
-    name      = "worker"
-    image     = "${aws_ecr_repository.worker.repository_url}:latest"
-    essential = true
-  }])
+  container_definitions = jsonencode([
+    {
+      name  = "worker"
+      image = "${aws_ecr_repository.worker.repository_url}:latest"
+      essential = true
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/worker"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
 }
 
+########################################
+# Seed-data
+########################################
 resource "aws_ecs_task_definition" "seed_data" {
   family                   = "seed-data-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = var.ecs_task_execution_role_arn
+  cpu    = "256"
+  memory = "512"
+  execution_role_arn = var.ecs_task_execution_role_arn
 
-  container_definitions = jsonencode([{
-    name      = "seed-data"
-    image     = "${aws_ecr_repository.seed_data.repository_url}:latest"
-    essential = true
-  }])
+  container_definitions = jsonencode([
+    {
+      name  = "seed-data"
+      image = "${aws_ecr_repository.seed_data.repository_url}:latest"
+      essential = true
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/seed-data"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
 }
+
 
 resource "aws_ecs_service" "vote" {
   name            = "vote-service"
