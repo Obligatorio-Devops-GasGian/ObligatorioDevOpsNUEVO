@@ -123,6 +123,7 @@ resource "aws_ecs_task_definition" "vote" {
   cpu    = "256"
   memory = "512"
   execution_role_arn = var.ecs_task_execution_role_arn
+  task_role_arn = var.ecs_task_execution_role_arn
 
   container_definitions = jsonencode([
     {
@@ -153,6 +154,7 @@ resource "aws_ecs_task_definition" "result" {
   cpu    = "256"
   memory = "512"
   execution_role_arn = var.ecs_task_execution_role_arn
+  task_role_arn = var.ecs_task_execution_role_arn
 
   container_definitions = jsonencode([
     {
@@ -183,6 +185,7 @@ resource "aws_ecs_task_definition" "worker" {
   cpu    = "256"
   memory = "512"
   execution_role_arn = var.ecs_task_execution_role_arn
+  task_role_arn = var.ecs_task_execution_role_arn
 
   container_definitions = jsonencode([
     {
@@ -212,6 +215,7 @@ resource "aws_ecs_task_definition" "seed_data" {
   cpu    = "256"
   memory = "512"
   execution_role_arn = var.ecs_task_execution_role_arn
+  task_role_arn = var.ecs_task_execution_role_arn
 
   container_definitions = jsonencode([
     {
