@@ -319,4 +319,93 @@ resource "aws_cloudwatch_log_group" "seed_data" {
   name              = "/ecs/seed-data"
   retention_in_days = 7
 }
+resource "aws_ecr_repository" "redis" {
+  name = "redis"
+}
+
+resource "aws_ecr_repository" "db" {
+  name = "postgres"
+}
+resource "aws_ecs_task_definition" "redis" {
+  family                   = "redis-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = var.ecs_task_execution_role_arn
+
+  container_definitions = jsonencode([{
+    name  = "redis"
+    image = "redis:alpine"
+    essential = true
+    portMappings = [{ containerPort = 6379 }]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = "/ecs/redis"
+        awslogs-region        = var.aws_region
+        awslogs-stream-prefix = "ecs"
+      }
+    }
+  }])
+}
+resource "aws_ecs_task_definition" "db" {
+  family                   = "postgres-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "512"
+  memory                   = "1024"
+  execution_role_arn       = var.ecs_task_execution_role_arn
+
+  container_definitions = jsonencode([{
+    name  = "db"
+    image = "postgres:15-alpine"
+    essential = true
+    environment = [
+      { name = "POSTGRES_USER", value = "postgres" },
+      { name = "POSTGRES_PASSWORD", value = "postgres" }
+    ]
+    portMappings = [{ containerPort = 5432 }]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = "/ecs/db"
+        awslogs-region        = var.aws_region
+        awslogs-stream-prefix = "ecs"
+      }
+    }
+  }])
+}
+resource "aws_ecs_service" "redis" {
+  name            = "redis-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.redis.arn
+  launch_type     = "FARGATE"
+  desired_count   = 1
+  force_new_deployment = true
+
+  network_configuration {
+    subnets          = [aws_subnet.public_subnet.id]
+    security_groups  = [aws_security_group.instance_sg.id]
+    assign_public_ip = true
+  }
+}
+
+resource "aws_ecs_service" "db" {
+  name            = "db-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.db.arn
+  launch_type     = "FARGATE"
+  desired_count   = 1
+  force_new_deployment = true
+
+  network_configuration {
+    subnets          = [aws_subnet.public_subnet.id]
+    security_groups  = [aws_security_group.instance_sg.id]
+    assign_public_ip = true
+  }
+}
+
 //test4
