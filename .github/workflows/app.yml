@@ -1,15 +1,19 @@
 name: Build and Push Docker Images to ECR
 
+# ───────────── Trigger ─────────────
 on:
   workflow_run:
     workflows: ["AWS Credentials Test and Terraform Plan"]
+    branches: [infra]            # solo cuando la IaC cambia en infra
     types:
       - completed
 
 jobs:
-  docker:
+#─────────────────── 1. DEV ───────────────────
+  docker-dev:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    environment: dev            # secretos *_DEV
 
     steps:
       - name: Checkout code
@@ -21,8 +25,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Permission to app.py
         run: chmod +x vote/app.py
@@ -42,53 +45,135 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      # No se incluye "Wait for Quality Gate" porque la acción oficial de SonarCloud no está publicada.
-      # La verificación de Quality Gate debe hacerse manualmente desde la interfaz de SonarCloud.
-
-      # Solo se llega aquí si pasó todo
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials (dev)
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN_DEV }}
+          aws-region:            ${{ secrets.AWS_REGION_DEV }}
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build and push vote image
+      # Build & push de cada imagen
+      - name: Build and push vote image (dev)
         run: |
           docker build -t vote ./vote
           docker tag vote:latest ${{ steps.login-ecr.outputs.registry }}/vote:latest
           docker push ${{ steps.login-ecr.outputs.registry }}/vote:latest
 
-      - name: Build and push result image
+      - name: Build and push result image (dev)
         run: |
           docker build -t result ./result
           docker tag result:latest ${{ steps.login-ecr.outputs.registry }}/result:latest
           docker push ${{ steps.login-ecr.outputs.registry }}/result:latest
 
-      - name: Build and push worker image
+      - name: Build and push worker image (dev)
         run: |
           docker build -t worker ./worker
           docker tag worker:latest ${{ steps.login-ecr.outputs.registry }}/worker:latest
           docker push ${{ steps.login-ecr.outputs.registry }}/worker:latest
 
-      - name: Build and push seed-data image
+      - name: Build and push seed-data image (dev)
         run: |
           docker build -t seed-data ./seed-data
           docker tag seed-data:latest ${{ steps.login-ecr.outputs.registry }}/seed-data:latest
           docker push ${{ steps.login-ecr.outputs.registry }}/seed-data:latest
-      - name: Force new deployment (vote, result, worker, seed)
+
+      - name: Force new deployment (ECS dev)
         run: |
           for svc in vote-service result-service worker-service seed-data-service; do
             aws ecs update-service \
               --cluster obligatorio-cluster \
               --service $svc \
               --force-new-deployment \
-              --region $AWS_REGION
+              --region $AWS_REGION_DEV
           done
         env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_REGION_DEV: ${{ secrets.AWS_REGION_DEV }}
+
+#─────────────────── 2. PROD ───────────────────
+  docker-prod:
+    needs: docker-dev
+    runs-on: ubuntu-latest
+    environment: prod           # secretos *_PROD
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Permission to app.py
+        run: chmod +x vote/app.py
+
+      - name: Run functional test
+        run: |
+          export PYTHONPATH=$PYTHONPATH:.
+          pytest vote/test_funcional.py
+
+      - name: Run SonarCloud analysis
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.organization=obligatorio-devops-gasgian
+            -Dsonar.projectKey=Obligatorio-Devops-GasGian_ObligatorioDevOpsNUEVO
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Configure AWS Credentials (prod)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN_PROD }}
+          aws-region:            ${{ secrets.AWS_REGION_PROD }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and push vote image (prod)
+        run: |
+          docker build -t vote ./vote
+          docker tag vote:latest ${{ steps.login-ecr.outputs.registry }}/vote:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/vote:latest
+
+      - name: Build and push result image (prod)
+        run: |
+          docker build -t result ./result
+          docker tag result:latest ${{ steps.login-ecr.outputs.registry }}/result:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/result:latest
+
+      - name: Build and push worker image (prod)
+        run: |
+          docker build -t worker ./worker
+          docker tag worker:latest ${{ steps.login-ecr.outputs.registry }}/worker:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/worker:latest
+
+      - name: Build and push seed-data image (prod)
+        run: |
+          docker build -t seed-data ./seed-data
+          docker tag seed-data:latest ${{ steps.login-ecr.outputs.registry }}/seed-data:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/seed-data:latest
+
+      - name: Force new deployment (ECS prod)
+        run: |
+          for svc in vote-service result-service worker-service seed-data-service; do
+            aws ecs update-service \
+              --cluster obligatorio-cluster \
+              --service $svc \
+              --force-new-deployment \
+              --region $AWS_REGION_PROD
+          done
+        env:
+          AWS_REGION_PROD: ${{ secrets.AWS_REGION_PROD }}
