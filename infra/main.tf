@@ -458,5 +458,3 @@ resource "aws_ecs_service" "db" {
     assign_public_ip = true
   }
 }
-
-//test4
