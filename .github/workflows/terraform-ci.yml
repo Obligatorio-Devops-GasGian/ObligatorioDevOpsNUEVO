@@ -6,14 +6,12 @@ on:
     branches:
       - infra
       - infra-config
-    paths:
-      - 'infra/**'
+
   pull_request:
     branches:
       - infra
       - infra-config
-    paths:
-      - 'infra/**'
+
 
 jobs:
   terraform-dev:
