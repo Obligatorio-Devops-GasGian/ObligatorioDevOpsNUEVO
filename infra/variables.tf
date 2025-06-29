@@ -19,5 +19,5 @@ variable "ecs_task_execution_role_arn" {
 variable "redis_host" {
   description = "Hostname o IP de Redis accesible desde ECS"
   type        = string
-  default     = "redis-service.obligatorio-cluster"
+  default     = "redis-service"
 }
