@@ -5,12 +5,15 @@ import socket
 import random
 import json
 import logging
+from prometheus_flask_exporter import PrometheusMetrics
+
 
 option_a = os.getenv('OPTION_A', 'Cats')
 option_b = os.getenv('OPTION_B', 'Dogs')
 hostname = socket.gethostname()
 
 app = Flask(__name__)
+metrics = PrometheusMetrics(app)
 
 gunicorn_error_logger = logging.getLogger('gunicorn.error')
 app.logger.handlers.extend(gunicorn_error_logger.handlers)
