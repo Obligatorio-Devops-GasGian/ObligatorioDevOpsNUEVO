@@ -172,6 +172,21 @@ resource "aws_ecs_task_definition" "vote" {
           awslogs-stream-prefix = "ecs"
         }
       }
+    },    
+    {
+      name  = "redis"
+      image = "redis:alpine"
+      essential = true
+      portMappings = [{ containerPort = 6379 }]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/redis"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
     }
   ])
 }
