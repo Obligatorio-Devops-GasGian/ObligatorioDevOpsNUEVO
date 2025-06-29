@@ -97,6 +97,14 @@ resource "aws_security_group" "instance_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+# PostgreSQL
+ingress {
+  description = "Allow PostgreSQL from internal network"
+  from_port   = 5432
+  to_port     = 5432
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+}
 
   tags = {
     Name = "obligatorio-sg"
