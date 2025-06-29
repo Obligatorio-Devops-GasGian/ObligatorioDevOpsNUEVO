@@ -6,53 +6,107 @@ on:
     branches:
       - infra
       - infra-config
+    paths:
+      - 'infra/**'
   pull_request:
     branches:
       - infra
       - infra-config
+    paths:
+      - 'infra/**'
 
 jobs:
-  terraform:
+  terraform-dev:
+    name: Terraform Dev
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./infra
+    environment: dev
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.6.6
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
 
-    - name: Configure AWS Credentials (with session token)
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS Credentials (dev)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN_DEV }}
+          aws-region:            ${{ secrets.AWS_REGION_DEV }}
 
-    - name: Test AWS credentials
-      run: aws sts get-caller-identity
+      - name: Test AWS credentials
+        run: aws sts get-caller-identity
 
-    - name: Terraform Init
-      run: terraform init
+      - name: Terraform Init
+        run: terraform init
 
-    - name: Terraform Validate
-      run: terraform validate
+      - name: Terraform Validate
+        run: terraform validate
 
-    - name: Terraform Plan
-      run: terraform plan -input=false
-    
-    - name: Terraform Apply
-      run: terraform apply -auto-approve -input=false
-    
-    - name: Crear log groups para ECS
-      run: |
-        aws logs describe-log-groups --log-group-name-prefix /ecs/vote | grep "/ecs/vote" || aws logs create-log-group --log-group-name /ecs/vote
-        aws logs describe-log-groups --log-group-name-prefix /ecs/result | grep "/ecs/result" || aws logs create-log-group --log-group-name /ecs/result
-        aws logs describe-log-groups --log-group-name-prefix /ecs/worker | grep "/ecs/worker" || aws logs create-log-group --log-group-name /ecs/worker
-        aws logs describe-log-groups --log-group-name-prefix /ecs/seed-data | grep "/ecs/seed-data" || aws logs create-log-group --log-group-name /ecs/seed-data
+      - name: Terraform Plan
+        run: terraform plan -input=false
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -input=false
+
+      - name: Crear log groups para ECS (dev)
+        run: |
+          aws logs describe-log-groups --log-group-name-prefix /ecs/vote | grep "/ecs/vote" || aws logs create-log-group --log-group-name /ecs/vote
+          aws logs describe-log-groups --log-group-name-prefix /ecs/result | grep "/ecs/result" || aws logs create-log-group --log-group-name /ecs/result
+          aws logs describe-log-groups --log-group-name-prefix /ecs/worker | grep "/ecs/worker" || aws logs create-log-group --log-group-name /ecs/worker
+          aws logs describe-log-groups --log-group-name-prefix /ecs/seed-data | grep "/ecs/seed-data" || aws logs create-log-group --log-group-name /ecs/seed-data
+
+  terraform-prod:
+    name: Terraform Prod
+    needs: terraform-dev
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra
+    environment: prod
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Configure AWS Credentials (prod)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN_PROD }}
+          aws-region:            ${{ secrets.AWS_REGION_PROD }}
+
+      - name: Test AWS credentials
+        run: aws sts get-caller-identity
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -input=false
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -input=false
+
+      - name: Crear log groups para ECS (prod)
+        run: |
+          aws logs describe-log-groups --log-group-name-prefix /ecs/vote | grep "/ecs/vote" || aws logs create-log-group --log-group-name /ecs/vote
+          aws logs describe-log-groups --log-group-name-prefix /ecs/result | grep "/ecs/result" || aws logs create-log-group --log-group-name /ecs/result
+          aws logs describe-log-groups --log-group-name-prefix /ecs/worker | grep "/ecs/worker" || aws logs create-log-group --log-group-name /ecs/worker
+          aws logs describe-log-groups --log-group-name-prefix /ecs/seed-data | grep "/ecs/seed-data" || aws logs create-log-group --log-group-name /ecs/seed-data
