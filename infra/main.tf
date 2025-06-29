@@ -458,3 +458,60 @@ resource "aws_ecs_service" "db" {
     assign_public_ip = true
   }
 }
+
+# CloudWatch Alarms
+
+########################################
+# SNS para notificaciones               #
+########################################
+resource "aws_sns_topic" "alarms" {
+  name = "obligatorio-alertas"
+}
+
+resource "aws_sns_topic_subscription" "email_alert" {
+  topic_arn = aws_sns_topic.alarms.arn
+  protocol  = "email"
+  endpoint  = "gasvaryt@gmail.com"
+}
+
+########################################
+# Parámetros globales de la alarma
+########################################
+locals {
+  cpu_threshold          = 1   # % – se dispara con >1 % de CPU
+  evaluation_periods     = 1   # basta un único período
+  period_seconds         = 30  # 30 segundos de ventana
+  treat_missing_strategy = "breaching"  # falta de datos = alarma
+  services = {
+    vote      = aws_ecs_service.vote.name
+    result    = aws_ecs_service.result.name
+    worker    = aws_ecs_service.worker.name
+    seed_data = aws_ecs_service.seed_data.name
+    redis     = aws_ecs_service.redis.name
+    db        = aws_ecs_service.db.name
+  }
+}
+
+########################################
+# Alarmas CPU para TODOS los servicios ECS
+########################################
+resource "aws_cloudwatch_metric_alarm" "cpu_ultra" {
+  for_each            = local.services
+
+  alarm_name          = "${each.key}-cpu-ultra"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = local.evaluation_periods
+  period              = local.period_seconds
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  statistic           = "Average"
+  threshold           = local.cpu_threshold
+  alarm_description   = "CPU > ${local.cpu_threshold}% en ${each.key}-service durante ${local.period_seconds}s"
+  dimensions = {
+    ClusterName = aws_ecs_cluster.main.name
+    ServiceName = each.value
+  }
+  treat_missing_data = local.treat_missing_strategy
+  alarm_actions      = [aws_sns_topic.alarms.arn]
+  ok_actions         = [aws_sns_topic.alarms.arn]
+}
