@@ -4,7 +4,6 @@ name: Build and Push Docker Images to ECR
 on:
   workflow_run:
     workflows: ["AWS Credentials Test and Terraform Plan"]
-    branches: [infra]            # solo cuando la IaC cambia en infra
     types:
       - completed
 
