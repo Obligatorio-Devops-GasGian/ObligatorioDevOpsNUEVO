@@ -174,7 +174,7 @@ resource "aws_ecs_task_definition" "vote" {
       }
     },    
     {
-      name  = "redis"
+      name  = "redis-service"
       image = "redis:alpine"
       essential = true
       portMappings = [{ containerPort = 6379 }]
