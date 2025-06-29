@@ -50,11 +50,11 @@ resource "aws_route_table_association" "public_assoc" {
 
 resource "aws_security_group" "instance_sg" {
   name        = "obligatorio-sg"
-  description = "Permite acceso SSH y HTTP"
+  description = "Permite acceso SSH, HTTP y tráfico interno entre servicios"
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "SSH"
+    description = "SSH desde Internet"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
@@ -62,11 +62,27 @@ resource "aws_security_group" "instance_sg" {
   }
 
   ingress {
-    description = "HTTP"
+    description = "HTTP desde Internet"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description     = "Redis entre tareas ECS"
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
+    security_groups = [aws_security_group.instance_sg.id]  
+  }
+
+  ingress {
+    description     = "Postgres entre tareas ECS"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.instance_sg.id]
   }
 
   egress {
@@ -80,6 +96,7 @@ resource "aws_security_group" "instance_sg" {
     Name = "obligatorio-sg"
   }
 }
+
 
 resource "aws_instance" "example" {
   ami                         = "ami-0c02fb55956c7d316"
