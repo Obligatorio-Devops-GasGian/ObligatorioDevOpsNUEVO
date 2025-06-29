@@ -43,7 +43,8 @@ jobs:
         run: aws sts get-caller-identity
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -backend-config=backend-dev.tfbackend
+
 
       - name: Terraform Validate
         run: terraform validate
@@ -91,7 +92,8 @@ jobs:
         run: aws sts get-caller-identity
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -backend-config=backend-prod.tfbackend
+
 
       - name: Terraform Validate
         run: terraform validate
