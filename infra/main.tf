@@ -155,7 +155,7 @@ resource "aws_ecs_task_definition" "vote" {
 
 
 ########################################
-# Result
+# Result a
 ########################################
 resource "aws_ecs_task_definition" "result" {
   family                   = "result-task"
