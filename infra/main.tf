@@ -384,9 +384,9 @@ resource "aws_ecs_task_definition" "redis" {
   cpu                      = "256"
   memory                   = "512"
   execution_role_arn       = var.ecs_task_execution_role_arn
-
+  task_role_arn            = var.ecs_task_execution_role_arn
   container_definitions = jsonencode([{
-    name  = "redis"
+    name  = "redis-service"
     image = "redis:alpine"
     essential = true
     portMappings = [{ containerPort = 6379 }]
@@ -408,7 +408,7 @@ resource "aws_ecs_task_definition" "db" {
   cpu                      = "512"
   memory                   = "1024"
   execution_role_arn       = var.ecs_task_execution_role_arn
-
+  task_role_arn            = var.ecs_task_execution_role_arn
   container_definitions = jsonencode([{
     name  = "db"
     image = "postgres:15-alpine"
