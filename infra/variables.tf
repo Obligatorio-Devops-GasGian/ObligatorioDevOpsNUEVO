@@ -15,3 +15,9 @@ variable "ecs_task_execution_role_arn" {
   type        = string
   default     = "arn:aws:iam::216973958514:role/LabRole"
 }
+
+variable "redis_host" {
+  description = "Hostname o IP de Redis accesible desde ECS"
+  type        = string
+  default     = "redis-service"
+}

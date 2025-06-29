@@ -1,4 +1,4 @@
-# main.tf
+# main.tf 2
 
 # VPC
 resource "aws_vpc" "main" {
@@ -50,9 +50,11 @@ resource "aws_route_table_association" "public_assoc" {
 
 resource "aws_security_group" "instance_sg" {
   name        = "obligatorio-sg"
-  description = "Permite acceso SSH y HTTP"
+  description = "Permite SSH, HTTP, Redis y PostgreSQL"
   vpc_id      = aws_vpc.main.id
 
+  # ────── INGRESS ──────
+  # SSH
   ingress {
     description = "SSH"
     from_port   = 22
@@ -61,6 +63,7 @@ resource "aws_security_group" "instance_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # HTTP
   ingress {
     description = "HTTP"
     from_port   = 80
@@ -69,6 +72,25 @@ resource "aws_security_group" "instance_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Redis
+  ingress {
+    description = "Redis"
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # PostgreSQL
+  ingress {
+    description = "PostgreSQL"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # ────── EGRESS ─────
   egress {
     from_port   = 0
     to_port     = 0
@@ -80,6 +102,7 @@ resource "aws_security_group" "instance_sg" {
     Name = "obligatorio-sg"
   }
 }
+
 
 resource "aws_instance" "example" {
   ami                         = "ami-0c02fb55956c7d316"
@@ -113,6 +136,9 @@ resource "aws_ecr_repository" "seed_data" {
   name = "seed-data"
 }
 
+########################################
+# Vote
+########################################
 resource "aws_ecs_task_definition" "vote" {
   family                   = "vote-task"
   network_mode             = "awsvpc"
@@ -120,60 +146,143 @@ resource "aws_ecs_task_definition" "vote" {
   cpu                      = "256"
   memory                   = "512"
   execution_role_arn       = var.ecs_task_execution_role_arn
+  task_role_arn            = var.ecs_task_execution_role_arn
 
-  container_definitions = jsonencode([{
-    name      = "vote"
-    image     = "${aws_ecr_repository.vote.repository_url}:latest"
-    essential = true
-    portMappings = [{ containerPort = 80 }]
-  }])
+  container_definitions = jsonencode([
+    {
+      name      = "vote"
+      image     = "${aws_ecr_repository.vote.repository_url}:latest"
+      essential = true
+      portMappings = [
+        {
+          containerPort = 80
+        }
+      ]
+      environment = [
+        {
+          name  = "REDIS_HOST"
+          value = var.redis_host
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/vote"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    },    
+    {
+      name  = "redis-service"
+      image = "redis:alpine"
+      essential = true
+      portMappings = [{ containerPort = 6379 }]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/redis"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
 }
 
+
+########################################
+# Result a
+########################################
 resource "aws_ecs_task_definition" "result" {
   family                   = "result-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = var.ecs_task_execution_role_arn
+  cpu    = "256"
+  memory = "512"
+  execution_role_arn = var.ecs_task_execution_role_arn
+  task_role_arn = var.ecs_task_execution_role_arn
 
-  container_definitions = jsonencode([{
-    name      = "result"
-    image     = "${aws_ecr_repository.result.repository_url}:latest"
-    essential = true
-    portMappings = [{ containerPort = 80 }]
-  }])
+  container_definitions = jsonencode([
+    {
+      name  = "result"
+      image = "${aws_ecr_repository.result.repository_url}:latest"
+      essential    = true
+      portMappings = [{ containerPort = 80 }]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/result"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
 }
 
+########################################
+# Worker
+########################################
 resource "aws_ecs_task_definition" "worker" {
   family                   = "worker-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = var.ecs_task_execution_role_arn
+  cpu    = "256"
+  memory = "512"
+  execution_role_arn = var.ecs_task_execution_role_arn
+  task_role_arn = var.ecs_task_execution_role_arn
 
-  container_definitions = jsonencode([{
-    name      = "worker"
-    image     = "${aws_ecr_repository.worker.repository_url}:latest"
-    essential = true
-  }])
+  container_definitions = jsonencode([
+    {
+      name  = "worker"
+      image = "${aws_ecr_repository.worker.repository_url}:latest"
+      essential = true
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/worker"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
 }
 
+########################################
+# Seed-data
+########################################
 resource "aws_ecs_task_definition" "seed_data" {
   family                   = "seed-data-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = var.ecs_task_execution_role_arn
+  cpu    = "256"
+  memory = "512"
+  execution_role_arn = var.ecs_task_execution_role_arn
+  task_role_arn = var.ecs_task_execution_role_arn
 
-  container_definitions = jsonencode([{
-    name      = "seed-data"
-    image     = "${aws_ecr_repository.seed_data.repository_url}:latest"
-    essential = true
-  }])
+  container_definitions = jsonencode([
+    {
+      name  = "seed-data"
+      image = "${aws_ecr_repository.seed_data.repository_url}:latest"
+      essential = true
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/seed-data"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
 }
+
 
 resource "aws_ecs_service" "vote" {
   name            = "vote-service"
@@ -182,7 +291,7 @@ resource "aws_ecs_service" "vote" {
   launch_type     = "FARGATE"
   desired_count   = 1
   force_new_deployment = true
-
+  enable_execute_command = true
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
     security_groups  = [aws_security_group.instance_sg.id]
@@ -197,7 +306,7 @@ resource "aws_ecs_service" "result" {
   launch_type     = "FARGATE"
   desired_count   = 1
   force_new_deployment = true
-
+  enable_execute_command = true
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
     security_groups  = [aws_security_group.instance_sg.id]
@@ -212,7 +321,7 @@ resource "aws_ecs_service" "worker" {
   launch_type     = "FARGATE"
   desired_count   = 1
   force_new_deployment = true
-
+  enable_execute_command = true
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
     security_groups  = [aws_security_group.instance_sg.id]
@@ -227,7 +336,7 @@ resource "aws_ecs_service" "seed_data" {
   launch_type     = "FARGATE"
   desired_count   = 1
   force_new_deployment = true
-
+  enable_execute_command = true
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
     security_groups  = [aws_security_group.instance_sg.id]
@@ -235,3 +344,117 @@ resource "aws_ecs_service" "seed_data" {
   }
 }
 //test3
+########################################
+# CloudWatch Log Groups
+########################################
+
+resource "aws_cloudwatch_log_group" "vote" {
+  name              = "/ecs/vote"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "result" {
+  name              = "/ecs/result"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "worker" {
+  name              = "/ecs/worker"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "seed_data" {
+  name              = "/ecs/seed-data"
+  retention_in_days = 7
+}
+resource "aws_cloudwatch_log_group" "db" {
+  name              = "/ecs/db"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "redis" {
+  name              = "/ecs/redis"
+  retention_in_days = 7
+}
+
+resource "aws_ecs_task_definition" "redis" {
+  family                   = "redis-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = var.ecs_task_execution_role_arn
+  task_role_arn            = var.ecs_task_execution_role_arn
+  container_definitions = jsonencode([{
+    name  = "redis-service"
+    image = "redis:alpine"
+    essential = true
+    portMappings = [{ containerPort = 6379 }]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = "/ecs/redis"
+        awslogs-region        = var.aws_region
+        awslogs-stream-prefix = "ecs"
+      }
+    }
+  }])
+}
+resource "aws_ecs_task_definition" "db" {
+  family                   = "postgres-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "512"
+  memory                   = "1024"
+  execution_role_arn       = var.ecs_task_execution_role_arn
+  task_role_arn            = var.ecs_task_execution_role_arn
+  container_definitions = jsonencode([{
+    name  = "db"
+    image = "postgres:15-alpine"
+    essential = true
+    environment = [
+      { name = "POSTGRES_USER", value = "postgres" },
+      { name = "POSTGRES_PASSWORD", value = "postgres" }
+    ]
+    portMappings = [{ containerPort = 5432 }]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = "/ecs/db"
+        awslogs-region        = var.aws_region
+        awslogs-stream-prefix = "ecs"
+      }
+    }
+  }])
+}
+resource "aws_ecs_service" "redis" {
+  name            = "redis-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.redis.arn
+  launch_type     = "FARGATE"
+  desired_count   = 1
+  force_new_deployment = true
+
+  network_configuration {
+    subnets          = [aws_subnet.public_subnet.id]
+    security_groups  = [aws_security_group.instance_sg.id]
+    assign_public_ip = true
+  }
+}
+
+resource "aws_ecs_service" "db" {
+  name            = "db-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.db.arn
+  launch_type     = "FARGATE"
+  desired_count   = 1
+  force_new_deployment = true
+
+  network_configuration {
+    subnets          = [aws_subnet.public_subnet.id]
+    security_groups  = [aws_security_group.instance_sg.id]
+    assign_public_ip = true
+  }
+}

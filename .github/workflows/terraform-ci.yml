@@ -46,5 +46,13 @@ jobs:
 
     - name: Terraform Plan
       run: terraform plan -input=false
+    
     - name: Terraform Apply
       run: terraform apply -auto-approve -input=false
+    
+    - name: Crear log groups para ECS
+      run: |
+        aws logs describe-log-groups --log-group-name-prefix /ecs/vote | grep "/ecs/vote" || aws logs create-log-group --log-group-name /ecs/vote
+        aws logs describe-log-groups --log-group-name-prefix /ecs/result | grep "/ecs/result" || aws logs create-log-group --log-group-name /ecs/result
+        aws logs describe-log-groups --log-group-name-prefix /ecs/worker | grep "/ecs/worker" || aws logs create-log-group --log-group-name /ecs/worker
+        aws logs describe-log-groups --log-group-name-prefix /ecs/seed-data | grep "/ecs/seed-data" || aws logs create-log-group --log-group-name /ecs/seed-data
