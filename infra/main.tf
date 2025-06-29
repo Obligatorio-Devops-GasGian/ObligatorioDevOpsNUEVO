@@ -90,7 +90,7 @@ resource "aws_security_group" "instance_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # ────── EGRESS ──────
+  # ────── EGRESS ─────
   egress {
     from_port   = 0
     to_port     = 0
