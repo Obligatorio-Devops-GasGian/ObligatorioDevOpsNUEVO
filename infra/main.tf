@@ -120,18 +120,27 @@ resource "aws_ecs_task_definition" "vote" {
   family                   = "vote-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu    = "256"
-  memory = "512"
-  execution_role_arn = var.ecs_task_execution_role_arn
-  task_role_arn = var.ecs_task_execution_role_arn
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = var.ecs_task_execution_role_arn
+  task_role_arn            = var.ecs_task_execution_role_arn
 
   container_definitions = jsonencode([
     {
-      name  = "vote"
-      image = "${aws_ecr_repository.vote.repository_url}:latest"
-      essential    = true
-      portMappings = [{ containerPort = 80 }]
-
+      name      = "vote"
+      image     = "${aws_ecr_repository.vote.repository_url}:latest"
+      essential = true
+      portMappings = [
+        {
+          containerPort = 80
+        }
+      ]
+      environment = [
+        {
+          name  = "REDIS_HOST"
+          value = var.redis_host
+        }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -143,6 +152,7 @@ resource "aws_ecs_task_definition" "vote" {
     }
   ])
 }
+
 
 ########################################
 # Result
