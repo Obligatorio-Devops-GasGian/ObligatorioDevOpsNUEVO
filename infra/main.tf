@@ -482,10 +482,10 @@ resource "aws_sns_topic_subscription" "email_alert" {
 # Parámetros globales de la alarma
 ########################################
 locals {
-  cpu_threshold          = 1   # % – se dispara con >1 % de CPU
-  evaluation_periods     = 1   # basta un único período
-  period_seconds         = 30  # 30 segundos de ventana
-  treat_missing_strategy = "breaching"  # falta de datos = alarma
+  cpu_threshold          = 1   
+  evaluation_periods     = 1 
+  period_seconds         = 30 
+  treat_missing_strategy = "breaching"  
   services = {
     vote      = aws_ecs_service.vote.name
     result    = aws_ecs_service.result.name
