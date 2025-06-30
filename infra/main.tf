@@ -460,7 +460,7 @@ resource "aws_ecs_service" "db" {
 }
 
 # CloudWatch Alarms
-/*
+
 ########################################
 # SNS para notificaciones               #
 ########################################
@@ -469,14 +469,14 @@ resource "aws_sns_topic" "alarms" {
 }
 
 # --- email ---------------
-#
-#
-# resource "aws_sns_topic_subscription" "email_alert" {
-#   topic_arn = aws_sns_topic.alarms.arn
-#   protocol  = "email"
-#   endpoint  = "gasvaryt@gmail.com"
-# }
-# 
+
+
+resource "aws_sns_topic_subscription" "email_alert" {
+   topic_arn = aws_sns_topic.alarms.arn
+   protocol  = "email"
+   endpoint  = "gasvaryt@gmail.com"
+}
+
 
 ########################################
 # Parámetros globales de la alarma
@@ -519,5 +519,8 @@ resource "aws_cloudwatch_metric_alarm" "cpu_ultra" {
   alarm_actions      = [aws_sns_topic.alarms.arn]
   ok_actions         = [aws_sns_topic.alarms.arn]
 }
-//test
-*/
+
+
+###############################
+#Lambda
+###############################
