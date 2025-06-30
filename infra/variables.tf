@@ -21,3 +21,9 @@ variable "redis_host" {
   type        = string
   default     = "redis-service"
 }
+
+variable "lambda_runtime" {
+  description = "Runtime de la función Lambda"
+  type        = string
+  default     = "python3.11"
+}

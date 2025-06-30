@@ -521,6 +521,52 @@ resource "aws_cloudwatch_metric_alarm" "cpu_ultra" {
 }
 
 
-###############################
-#Lambda
-###############################
+###############################################################################
+# LAMBDA “alarm-handler” – reutilizando LabRole
+###############################################################################
+
+data "archive_file" "alarm_zip" {
+  type        = "zip"
+  source_file = "${path.module}/lambda/alarm_handler.py"
+  output_path = "${path.module}/lambda/alarm_handler.zip"
+}
+
+data "aws_iam_role" "lambda_exec" {
+  name = "LabRole"
+}
+
+resource "aws_iam_role_policy_attachment" "labrole_lambda_basic" {
+  role       = data.aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. Definición de la función Lambda
+# ─────────────────────────────────────────────────────────────────────────────
+resource "aws_lambda_function" "alarm_handler" {
+  function_name    = "alarm-handler"
+  handler          = "alarm_handler.lambda_handler"
+  runtime          = var.lambda_runtime
+  filename         = data.archive_file.alarm_zip.output_path
+  source_code_hash = data.archive_file.alarm_zip.output_base64sha256
+  role             = data.aws_iam_role.lambda_exec.arn
+  tags = { Proyecto = "obligatorio" }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. Suscribir la Lambda al topic SNS existente de alarmas
+# ─────────────────────────────────────────────────────────────────────────────
+resource "aws_sns_topic_subscription" "lambda_alert" {
+  topic_arn = aws_sns_topic.alarms.arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.alarm_handler.arn
+}
+
+# Permiso explícito para que SNS pueda invocar la Lambda
+resource "aws_lambda_permission" "allow_sns_invoke" {
+  statement_id  = "AllowExecutionFromSNS"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.alarm_handler.function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = aws_sns_topic.alarms.arn
+}
