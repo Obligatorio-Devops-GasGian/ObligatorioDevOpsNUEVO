@@ -13,11 +13,17 @@ variable "aws_profile" {
 variable "ecs_task_execution_role_arn" {
   description = "ARN del rol IAM ya existente para ejecución de tareas ECS"
   type        = string
-  default     = "arn:aws:iam::216973958514:role/LabRole"
 }
+
 
 variable "redis_host" {
   description = "Hostname o IP de Redis accesible desde ECS"
   type        = string
   default     = "redis-service"
+}
+
+variable "lambda_runtime" {
+  description = "Runtime de la función Lambda"
+  type        = string
+  default     = "python3.11"
 }

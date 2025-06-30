@@ -458,3 +458,110 @@ resource "aws_ecs_service" "db" {
     assign_public_ip = true
   }
 }
+
+# CloudWatch Alarms
+
+########################################
+# SNS para notificaciones               #
+########################################
+resource "aws_sns_topic" "alarms" {
+  name = "obligatorio-alertas"
+}
+
+# --- email ---------------
+
+
+resource "aws_sns_topic_subscription" "email_alert" {
+   topic_arn = aws_sns_topic.alarms.arn
+   protocol  = "email"
+   endpoint  = "gasvaryt@gmail.com"
+}
+
+
+########################################
+# Parámetros globales de la alarma
+########################################
+locals {
+  cpu_threshold          = 1   
+  evaluation_periods     = 1 
+  period_seconds         = 30 
+  treat_missing_strategy = "breaching"  
+  services = {
+    vote      = aws_ecs_service.vote.name
+    result    = aws_ecs_service.result.name
+    worker    = aws_ecs_service.worker.name
+    seed_data = aws_ecs_service.seed_data.name
+    redis     = aws_ecs_service.redis.name
+    db        = aws_ecs_service.db.name
+  }
+}
+
+########################################
+# Alarmas CPU para TODOS los servicios ECS
+########################################
+resource "aws_cloudwatch_metric_alarm" "cpu_ultra" {
+  for_each            = local.services
+
+  alarm_name          = "${each.key}-cpu-ultra"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = local.evaluation_periods
+  period              = local.period_seconds
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  statistic           = "Average"
+  threshold           = local.cpu_threshold
+  alarm_description   = "CPU > ${local.cpu_threshold}% en ${each.key}-service durante ${local.period_seconds}s"
+  dimensions = {
+    ClusterName = aws_ecs_cluster.main.name
+    ServiceName = each.value
+  }
+  treat_missing_data = local.treat_missing_strategy
+  alarm_actions      = [aws_sns_topic.alarms.arn]
+  ok_actions         = [aws_sns_topic.alarms.arn]
+}
+
+
+###############################################################################
+# LAMBDA “alarm-handler” – reutilizando LabRole
+###############################################################################
+
+data "archive_file" "alarm_zip" {
+  type        = "zip"
+  source_file = "${path.module}/lambda/alarm_handler.py"
+  output_path = "${path.module}/lambda/alarm_handler.zip"
+}
+
+data "aws_iam_role" "lambda_exec" {
+  name = "LabRole"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. Definición de la función Lambda
+# ─────────────────────────────────────────────────────────────────────────────
+resource "aws_lambda_function" "alarm_handler" {
+  function_name    = "alarm-handler"
+  handler          = "alarm_handler.lambda_handler"
+  runtime          = var.lambda_runtime
+  filename         = data.archive_file.alarm_zip.output_path
+  source_code_hash = data.archive_file.alarm_zip.output_base64sha256
+  role             = data.aws_iam_role.lambda_exec.arn
+  tags = { Proyecto = "obligatorio" }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. Suscribir la Lambda al topic SNS existente de alarmas
+# ─────────────────────────────────────────────────────────────────────────────
+resource "aws_sns_topic_subscription" "lambda_alert" {
+  topic_arn = aws_sns_topic.alarms.arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.alarm_handler.arn
+}
+
+# Permiso explícito para que SNS pueda invocar la Lambda
+resource "aws_lambda_permission" "allow_sns_invoke" {
+  statement_id  = "AllowExecutionFromSNS"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.alarm_handler.function_name
+  principal     = "sns.amazonaws.com"
+  source_arn    = aws_sns_topic.alarms.arn
+}
