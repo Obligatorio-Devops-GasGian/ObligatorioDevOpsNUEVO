@@ -53,7 +53,22 @@ jobs:
         run: terraform plan -input=false -var-file=dev.tfvars
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -input=false -var-file=dev.tfvars
+        id: terraform-apply
+        run: |
+          set +e
+          terraform apply -auto-approve -input=false -var-file=dev.tfvars
+          status=$?
+          if [ $status -ne 0 ]; then
+            echo "::warning ::Terraform apply falló con código $status"
+            if [ -f errored.tfstate ]; then
+              echo "::notice ::Intentando push del estado..."
+              terraform state push errored.tfstate
+            else
+              echo "::error ::No se encontró errored.tfstate para recuperar el estado"
+            fi
+            exit $status
+          fi
+
 
       - name: Crear log groups para ECS (dev)
         run: |
@@ -102,7 +117,22 @@ jobs:
         run: terraform plan -input=false -var-file=prod.tfvars
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -input=false -var-file=prod.tfvars
+        id: terraform-apply
+        run: |
+          set +e
+          terraform apply -auto-approve -input=false -var-file=prod.tfvars
+          status=$?
+          if [ $status -ne 0 ]; then
+            echo "::warning ::Terraform apply falló con código $status"
+            if [ -f errored.tfstate ]; then
+              echo "::notice ::Intentando push del estado..."
+              terraform state push errored.tfstate
+            else
+              echo "::error ::No se encontró errored.tfstate para recuperar el estado"
+            fi
+            exit $status
+          fi
+
 
       - name: Crear log groups para ECS (prod)
         run: |
