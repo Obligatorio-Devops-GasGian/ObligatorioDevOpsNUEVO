@@ -468,11 +468,15 @@ resource "aws_sns_topic" "alarms" {
   name = "obligatorio-alertas"
 }
 
-resource "aws_sns_topic_subscription" "email_alert" {
-  topic_arn = aws_sns_topic.alarms.arn
-  protocol  = "email"
-  endpoint  = "gasvaryt@gmail.com"
-}
+# --- email ---------------
+#
+#
+# resource "aws_sns_topic_subscription" "email_alert" {
+#   topic_arn = aws_sns_topic.alarms.arn
+#   protocol  = "email"
+#   endpoint  = "gasvaryt@gmail.com"
+# }
+# 
 
 ########################################
 # Parámetros globales de la alarma
