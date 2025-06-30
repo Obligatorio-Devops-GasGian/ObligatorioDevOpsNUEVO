@@ -535,11 +535,6 @@ data "aws_iam_role" "lambda_exec" {
   name = "LabRole"
 }
 
-resource "aws_iam_role_policy_attachment" "labrole_lambda_basic" {
-  role       = data.aws_iam_role.lambda_exec.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Definición de la función Lambda
 # ─────────────────────────────────────────────────────────────────────────────
