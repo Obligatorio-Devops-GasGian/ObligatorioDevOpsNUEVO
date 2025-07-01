@@ -35,7 +35,7 @@ jobs:
           pytest vote/test_funcional.py
 
       - name: Run SonarCloud analysis
-        uses: SonarSource/sonarcloud-github-action@v2
+        uses: SonarSource/sonarcloud-github-action@v5
         with:
           projectBaseDir: .
           args: >
@@ -120,7 +120,7 @@ jobs:
           pytest vote/test_funcional.py
 
       - name: Run SonarCloud analysis
-        uses: SonarSource/sonarcloud-github-action@v2
+        uses: SonarSource/sonarcloud-github-action@v5
         with:
           projectBaseDir: .
           args: >
