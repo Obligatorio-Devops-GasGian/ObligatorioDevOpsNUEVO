@@ -498,7 +498,7 @@ locals {
 
 ########################################
 # Alarmas CPU para TODOS los servicios ECS
-########################################
+######################################## 
 resource "aws_cloudwatch_metric_alarm" "cpu_ultra" {
   for_each            = local.services
 
